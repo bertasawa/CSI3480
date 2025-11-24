@@ -1,0 +1,43 @@
+const API_BASE = "http://127.0.0.1:5000";
+
+// register
+document.getElementById("reg-btn").addEventListener("click", async () => {
+  const username = document.getElementById("reg-username").value;
+  const password = document.getElementById("reg-password").value;
+
+  const res = await fetch(`${API_BASE}/api/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+
+  const data = await res.json();
+  document.getElementById("reg-result").textContent = JSON.stringify(data);
+});
+
+// login
+document.getElementById("log-btn").addEventListener("click", async () => {
+  const username = document.getElementById("log-username").value;
+  const password = document.getElementById("log-password").value;
+
+  const res = await fetch(`${API_BASE}/api/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+
+  const data = await res.json();
+  document.getElementById("log-result").textContent = JSON.stringify(data);
+});
+
+// password generator
+document.getElementById("gen-btn").addEventListener("click", async () => {
+  const length = document.getElementById("gen-length").value || 16;
+
+  const res = await fetch(
+    `${API_BASE}/api/generate-password?length=${length}`
+  );
+  const data = await res.json();
+
+  document.getElementById("gen-result").textContent = data.password;
+});
