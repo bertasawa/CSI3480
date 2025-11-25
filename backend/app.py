@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory
 import bcrypt
 import sqlite3
 from database import get_db
+import secrets
 
 app = Flask(__name__, static_folder="../frontend", static_url_path="")
 
@@ -67,6 +68,23 @@ def login():
 def	welcome_page():
     return send_from_directory(app.static_folder, "index.html")
 
+@app.route("/api/strong_password", methods=["GET"])
+def get_strong_password():
+    # do math to figure out how many words to be stronger than A-Z, a-z, 0-9, !@#$
+    password_strength = 6
+    
+    with open("google-10000-english.txt") as file:
+        words_array = [w.strip() for w in file.readlines()]
+        password = ""
+        
+        for i in range(0, password_strength):
+            # using secrets bc documentation says its better for security purposes
+            r = secrets.SystemRandom().randrange(0, 9999)
+            password += words_array[r] + " "
+        
+        return jsonify({"password": password.strip()})
+            
+            
 if __name__ == "__main__":
     print(">>> Starting Flask backend on http://127.0.0.1:5000 ...")
     app.run(debug=True, use_reloader=False)
