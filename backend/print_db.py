@@ -8,7 +8,7 @@ cur.execute("SELECT username, password_hash FROM users")
 rows = cur.fetchall()
 print("users in DB:\n============================================")
 for row in rows:
-    print("username:  ", row["username_hash"], "\npassword:  ", row["password_hash"], "\n")
+    print("username:  ", row["username"], "\npassword:  ", row["password_hash"], "\n")
     
 print("============================================")
 
