@@ -3,6 +3,7 @@ import bcrypt
 import sqlite3
 from database import get_db
 import secrets
+import our_hash
 
 app = Flask(__name__, static_folder="../frontend", static_url_path="")
 
@@ -16,13 +17,20 @@ def register():
 
     username = data.get("username")
     password = data.get("password")
+    hash_type = data.get("hash_type")
 
     if not username or not password:
         return jsonify({"error": "Username and password required"}), 400
-
-    # Generate salt + hash password
+    
+    hashed_password = ""
     salt = bcrypt.gensalt()
-    hashed_password = bcrypt.hashpw(password.encode("utf-8"), salt)
+    if hash_type == "bcrypt":
+        # Generate salt + hash password
+        hashed_password = bcrypt.hashpw(password.encode("utf-8"), salt)
+    elif hash_type == "our_sha1":
+        hashed_password = our_hash.our_sha1(password)
+    else:
+        return jsonify({"error": "hash_type required"}), 400
 
     try:
         conn = get_db()
@@ -44,6 +52,7 @@ def login():
 
     username = data.get("username")
     password = data.get("password")
+    hash_type = data.get("hash_type")
 
     if not username or not password:
         return jsonify({"error": "Username and password required"}), 400
@@ -58,9 +67,16 @@ def login():
         return jsonify({"error": "Invalid username or password"}), 401
 
     stored_hash = row["password_hash"]
-
-    if bcrypt.checkpw(password.encode("utf-8"), stored_hash):
-        return jsonify({"message": "Login successful"}), 200
+    
+    if hash_type == "bcrypt":
+        if bcrypt.checkpw(password.encode("utf-8"), stored_hash):
+            return jsonify({"message": "Login successful"}), 200
+    elif hash_type == "our_sha1":
+        if our_hash.our_sha1(password) == stored_hash:
+            return jsonify({"message": "Login successful"}), 200
+    else:
+        return jsonify({"error": "hash_type required"}), 400
+    
 
     return jsonify({"error": "Invalid username or password"}), 401
 
