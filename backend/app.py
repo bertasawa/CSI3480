@@ -11,22 +11,21 @@ app = Flask(__name__, static_folder="../frontend", static_url_path="")
 def health():
     return jsonify({"status": "ok", "message": "Backend is connected"}), 200
 
+
 @app.route("/api/register", methods=["POST"])
 def register():
-    data = request.json
-
+    data = request.json or {}
     username = data.get("username")
     password = data.get("password")
     hash_type = data.get("hash_type")
 
     if not username or not password:
         return jsonify({"error": "Username and password required"}), 400
-    
-    hashed_password = ""
-    salt = bcrypt.gensalt()
+
     if hash_type == "bcrypt":
-        # Generate salt + hash password
-        hashed_password = bcrypt.hashpw(password.encode("utf-8"), salt)
+        hashed_password = bcrypt.hashpw(
+            password.encode("utf-8"), bcrypt.gensalt()
+        ).decode("utf-8")
     elif hash_type == "our_sha1":
         hashed_password = our_hash.our_sha1(password)
     else:
@@ -37,7 +36,7 @@ def register():
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO users (username, password_hash) VALUES (?, ?)",
-            (username, hashed_password)
+            (username, hashed_password),
         )
         conn.commit()
         conn.close()
@@ -46,10 +45,10 @@ def register():
 
     return jsonify({"message": "User registered successfully"}), 201
 
+
 @app.route("/api/login", methods=["POST"])
 def login():
-    data = request.json
-
+    data = request.json or {}
     username = data.get("username")
     password = data.get("password")
     hash_type = data.get("hash_type")
@@ -67,40 +66,34 @@ def login():
         return jsonify({"error": "Invalid username or password"}), 401
 
     stored_hash = row["password_hash"]
-    
+
     if hash_type == "bcrypt":
-        if bcrypt.checkpw(password.encode("utf-8"), stored_hash):
+        stored_bytes = stored_hash.encode("utf-8")
+        if bcrypt.checkpw(password.encode("utf-8"), stored_bytes):
             return jsonify({"message": "Login successful"}), 200
+
     elif hash_type == "our_sha1":
         if our_hash.our_sha1(password) == stored_hash:
             return jsonify({"message": "Login successful"}), 200
-    else:
-        return jsonify({"error": "hash_type required"}), 400
-    
 
     return jsonify({"error": "Invalid username or password"}), 401
 
-@app.route("/")
-def	welcome_page():
-    return send_from_directory(app.static_folder, "index.html")
 
 @app.route("/api/strong_password", methods=["GET"])
-def get_strong_password():
-    # do math to figure out how many words to be stronger than A-Z, a-z, 0-9, !@#$
-    password_strength = 6
-    
-    with open("google-10000-english.txt") as file:
-        words_array = [w.strip() for w in file.readlines()]
-        password = ""
-        
-        for i in range(0, password_strength):
-            # using secrets bc documentation says its better for security purposes
-            r = secrets.SystemRandom().randrange(0, 9999)
-            password += words_array[r] + " "
-        
-        return jsonify({"password": password.strip()})
-            
-            
+def strong_password():
+    with open("google-10000-english.txt", "r", encoding="utf-8") as file:
+        words = [w.strip() for w in file.readlines()]
+
+    rng = secrets.SystemRandom()
+    password = " ".join(rng.choice(words) for _ in range(6))
+    return jsonify({"password": password})
+
+
+@app.route("/")
+def welcome_page():
+    return send_from_directory(app.static_folder, "index.html")
+
+
 if __name__ == "__main__":
     print(">>> Starting Flask backend on http://127.0.0.1:5000 ...")
     app.run(debug=True, use_reloader=False)
